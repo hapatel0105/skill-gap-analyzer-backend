@@ -9,7 +9,7 @@ const supabase_1 = require("../config/supabase");
 const openrouter_1 = require("../config/openrouter");
 const errorHandler_1 = require("../middleware/errorHandler");
 const errorHandler_2 = require("../middleware/errorHandler");
-const skillUtils_1 = require("../src/shared/utils/skillUtils");
+const skillUtils_1 = require("../shared/utils/skillUtils");
 const router = express_1.default.Router();
 // Validation middleware
 const validateAnalysisRequest = [
