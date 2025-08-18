@@ -22,7 +22,7 @@ const auth_2 = require("./middleware/auth");
 // Load environment variables
 dotenv_1.default.config();
 const app = (0, express_1.default)();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 // Security middleware
 app.use((0, helmet_1.default)());
 // CORS configuration
