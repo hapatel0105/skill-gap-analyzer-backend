@@ -4,8 +4,8 @@
   "description": "Backend API server for Skill Gap Analyzer",
   "main": "dist/server.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "node index.js",
+    "start": "node dist/server.js",
+    "dev": "node src/server.ts",
     "build": "tsc",
     "clean": "rimraf dist"
   },
