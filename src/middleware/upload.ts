@@ -2,7 +2,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { CustomError } from './errorHandler';
-import { FILE_UPLOAD } from '../../../shared/constants';
+import { FILE_UPLOAD } from '../shared/constants';
 import { NextFunction, Request, Response } from 'express';
 import express from 'express';
 

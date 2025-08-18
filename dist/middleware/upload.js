@@ -8,7 +8,7 @@ const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const errorHandler_1 = require("./errorHandler");
-const constants_1 = require("../../../shared/constants");
+const constants_1 = require("../src/shared/constants");
 const UPLOAD_DIR = 'uploads/';
 // Ensure uploads directory exists.
 // Multer's diskStorage does not create the directory if it's missing.

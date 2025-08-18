@@ -1,0 +1,1 @@
+{"version":3,"file":"uploads.js","sourceRoot":"","sources":["../../../../src/shared/constants/uploads.ts"],"names":[],"mappings":";;;AAAa,QAAA,WAAW,GAAG;IACzB,QAAQ,EAAE,CAAC,GAAG,IAAI,GAAG,IAAI,EAAE,MAAM;IACjC,aAAa,EAAE;QACb,iBAAiB;QACjB,oBAAoB;QACpB,yEAAyE;QACzE,YAAY;KACb;IACD,kBAAkB,EAAE,CAAC,MAAM,EAAE,MAAM,EAAE,OAAO,EAAE,MAAM,CAAC;CAC7C,CAAC"}

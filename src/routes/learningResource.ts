@@ -4,7 +4,7 @@ import { supabase } from '../config/supabase';
 import { openai, LLAMA_MODELS, MODEL_PARAMS } from '../config/openrouter';
 import { asyncHandler } from '../middleware/errorHandler';
 import { CustomError } from '../middleware/errorHandler';
-import type { LearningResource, Skill, ApiResponse } from '../../../shared/types';
+import type { LearningResource, Skill, ApiResponse } from '../shared/types';
 
 const router = express.Router();
 

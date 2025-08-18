@@ -6,7 +6,7 @@ import { openai, LLAMA_MODELS, PROMPT_TEMPLATES, MODEL_PARAMS } from '../config/
 import { asyncHandler } from '../middleware/errorHandler';
 import { uploadResume, handleUploadError, validateUploadedFile, cleanupUploadedFile } from '../middleware/upload';
 import { CustomError } from '../middleware/errorHandler';
-import type { Skill, ApiResponse } from '../../../shared/types';
+import type { Skill, ApiResponse } from '../shared/types';
 import pdf from 'pdf-parse';
 import mammoth from 'mammoth';
 import fs from 'fs';

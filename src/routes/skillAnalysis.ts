@@ -4,8 +4,8 @@ import { supabase } from '../config/supabase';
 import { openai, LLAMA_MODELS, PROMPT_TEMPLATES, MODEL_PARAMS } from '../config/openrouter';
 import { asyncHandler } from '../middleware/errorHandler';
 import { CustomError } from '../middleware/errorHandler';
-import type { Skill, SkillGap, GapAnalysisResult, ApiResponse } from '../../../shared/types';
-import { calculateSkillGap, calculatePriority, calculateOverallGap, estimateTimeToClose } from '../../../shared/utils/skillUtils';
+import type { Skill, SkillGap, GapAnalysisResult, ApiResponse } from '../shared/types';
+import { calculateSkillGap, calculatePriority, calculateOverallGap, estimateTimeToClose } from '../src/shared/utils/skillUtils';
 
 const router = express.Router();
 
