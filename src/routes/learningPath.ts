@@ -1,6 +1,6 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
-import { supabase } from '../config/supabase';
+import { supabaseAdmin } from '../config/supabase';
 import { openai, LLAMA_MODELS, PROMPT_TEMPLATES, MODEL_PARAMS } from '../config/openrouter';
 import { asyncHandler } from '../middleware/errorHandler';
 import { CustomError } from '../middleware/errorHandler';
@@ -40,7 +40,7 @@ router.post('/generate', validateLearningPathRequest, asyncHandler(async (req: e
     };
 
     // Save learning path to database
-    const { data: savedPath, error: saveError } = await supabase
+    const { data: savedPath, error: saveError } = await supabaseAdmin
       .from('learning_paths')
       .insert({
         user_id: userId,
@@ -78,7 +78,7 @@ router.post('/generate', validateLearningPathRequest, asyncHandler(async (req: e
 router.get('/', asyncHandler(async (req: express.Request, res: express.Response) => {
   const userId = req.user!.id;
 
-  const { data: learningPaths, error } = await supabase
+  const { data: learningPaths, error } = await supabaseAdmin
     .from('learning_paths')
     .select('*')
     .eq('user_id', userId)
@@ -99,7 +99,7 @@ router.get('/:id', asyncHandler(async (req: express.Request, res: express.Respon
   const { id } = req.params;
   const userId = req.user!.id;
 
-  const { data: learningPath, error } = await supabase
+  const { data: learningPath, error } = await supabaseAdmin
     .from('learning_paths')
     .select('*')
     .eq('id', id)
@@ -122,7 +122,7 @@ router.put('/:id/progress', asyncHandler(async (req: express.Request, res: expre
   const userId = req.user!.id;
   const { completedResources, currentSkill, notes } = req.body;
 
-  const { data: learningPath, error } = await supabase
+  const { data: learningPath, error } = await supabaseAdmin
     .from('learning_paths')
     .update({
       completed_resources: completedResources,
@@ -153,7 +153,7 @@ router.post('/:id/regenerate', asyncHandler(async (req: express.Request, res: ex
   const { preferences } = req.body;
 
   // Get existing learning path
-  const { data: existingPath, error: fetchError } = await supabase
+  const { data: existingPath, error: fetchError } = await supabaseAdmin
     .from('learning_paths')
     .select('skill_gaps')
     .eq('id', id)
@@ -168,7 +168,7 @@ router.post('/:id/regenerate', asyncHandler(async (req: express.Request, res: ex
   const newLearningPath = await generateAILearningPath(existingPath.skill_gaps, preferences);
 
   // Update learning path
-  const { data: updatedPath, error: updateError } = await supabase
+  const { data: updatedPath, error: updateError } = await supabaseAdmin
     .from('learning_paths')
     .update({
       resources: newLearningPath.resources,
@@ -210,7 +210,7 @@ router.get('/resources/:skillName', asyncHandler(async (req: express.Request, re
   if (cost) filters.cost = cost;
 
   // Get resources from database (you can populate this with curated resources)
-  const { data: resources, error } = await supabase
+  const { data: resources, error } = await supabaseAdmin
     .from('learning_resources')
     .select('*')
     .ilike('skills', `%${skillName}%`)
@@ -243,7 +243,7 @@ router.get('/recommendations', asyncHandler(async (req: express.Request, res: ex
   const userId = req.user!.id;
 
   // Get user's current skills and recent analyses
-  const { data: recentAnalyses, error: analysisError } = await supabase
+  const { data: recentAnalyses, error: analysisError } = await supabaseAdmin
     .from('skill_gaps')
     .select('skill_gaps, overall_gap')
     .eq('user_id', userId)
