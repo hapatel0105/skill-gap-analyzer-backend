@@ -1,6 +1,6 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
-import { supabase } from '../config/supabase';
+import { supabaseAdmin } from '../config/supabase';
 import { openai, LLAMA_MODELS, PROMPT_TEMPLATES, MODEL_PARAMS } from '../config/openrouter';
 import { asyncHandler } from '../middleware/errorHandler';
 import { CustomError } from '../middleware/errorHandler';
@@ -27,7 +27,7 @@ router.post('/analyze', validateAnalysisRequest, asyncHandler(async (req: expres
 
   try {
     // Get resume skills
-    const { data: resume, error: resumeError } = await supabase
+    const { data: resume, error: resumeError } = await supabaseAdmin
       .from('resumes')
       .select('extracted_skills')
       .eq('id', resumeId)
@@ -39,7 +39,7 @@ router.post('/analyze', validateAnalysisRequest, asyncHandler(async (req: expres
     }
 
     // Get job description skills
-    const { data: jobDescription, error: jobError } = await supabase
+    const { data: jobDescription, error: jobError } = await supabaseAdmin
       .from('job_descriptions')
       .select('required_skills, preferred_skills')
       .eq('id', jobDescriptionId)
@@ -69,7 +69,7 @@ router.post('/analyze', validateAnalysisRequest, asyncHandler(async (req: expres
     };
 
     // Save analysis to database
-    const { data: savedAnalysis, error: saveError } = await supabase
+    const { data: savedAnalysis, error: saveError } = await supabaseAdmin
       .from('skill_gaps')
       .insert({
         user_id: userId,
@@ -124,7 +124,7 @@ router.post('/analyze', validateAnalysisRequest, asyncHandler(async (req: expres
 router.get('/', asyncHandler(async (req: express.Request, res: express.Response) => {
   const userId = req.user!.id;
 
-  const { data: analyses, error } = await supabase
+  const { data: analyses, error } = await supabaseAdmin
     .from('skill_gaps')
     .select('*')
     .eq('user_id', userId)
@@ -144,7 +144,7 @@ router.get('/', asyncHandler(async (req: express.Request, res: express.Response)
 router.get('/history', asyncHandler(async (req: express.Request, res: express.Response) => {
   const userId = req.user!.id;
 
-  const { data: analyses, error } = await supabase
+  const { data: analyses, error } = await supabaseAdmin
     .from('skill_gaps')
     .select(`
       *,
@@ -169,7 +169,7 @@ router.get('/:id', asyncHandler(async (req: express.Request, res: express.Respon
   const { id } = req.params;
   const userId = req.user!.id;
 
-  const { data: analysis, error } = await supabase
+  const { data: analysis, error } = await supabaseAdmin
     .from('skill_gaps')
     .select(`
       *,
@@ -196,7 +196,7 @@ router.post('/:id/reanalyze', asyncHandler(async (req: express.Request, res: exp
   const userId = req.user!.id;
 
   // Get existing analysis
-  const { data: existingAnalysis, error: fetchError } = await supabase
+  const { data: existingAnalysis, error: fetchError } = await supabaseAdmin
     .from('skill_gaps')
     .select(`
       *,
@@ -219,7 +219,7 @@ router.post('/:id/reanalyze', asyncHandler(async (req: express.Request, res: exp
   const newAnalysis = await performAIGapAnalysis(currentSkills, [...requiredSkills, ...preferredSkills]);
 
   // Update analysis
-  const { data: updatedAnalysis, error: updateError } = await supabase
+  const { data: updatedAnalysis, error: updateError } = await supabaseAdmin
     .from('skill_gaps')
     .update({
       skill_gaps: newAnalysis.skillGaps,
@@ -251,7 +251,7 @@ router.get('/insights', asyncHandler(async (req: express.Request, res: express.R
   const userId = req.user!.id;
 
   // Get all user's skills from resumes
-  const { data: resumes, error: resumeError } = await supabase
+  const { data: resumes, error: resumeError } = await supabaseAdmin
     .from('resumes')
     .select('extracted_skills')
     .eq('user_id', userId);
@@ -302,7 +302,7 @@ async function performAIGapAnalysis(currentSkills: Skill[], requiredSkills: Skil
     }
 
     const analysis = JSON.parse(response);
-    
+
     // Transform AI response to match our types
     const skillGaps: SkillGap[] = (analysis.skillGaps || []).map((gap: any) => ({
       skill: {
@@ -338,7 +338,7 @@ function calculateManualGaps(currentSkills: Skill[], requiredSkills: Skill[], pr
   // Find gaps for required skills
   for (const required of allRequired) {
     const current = currentSkills.find(c => c.name.toLowerCase() === required.name.toLowerCase());
-    
+
     if (!current) {
       // Skill not found - large gap
       gaps.push({
@@ -371,7 +371,7 @@ function getRecommendedFocus(gaps: SkillGap[]): string[] {
   const highPrioritySkills = gaps
     .filter(gap => gap.priority === 'high')
     .map(gap => gap.skill.name);
-  
+
   const mediumPrioritySkills = gaps
     .filter(gap => gap.priority === 'medium')
     .map(gap => gap.skill.name);

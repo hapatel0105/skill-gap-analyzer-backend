@@ -1,6 +1,6 @@
 import express from 'express';
 import { body, validationResult, query } from 'express-validator';
-import { supabase } from '../config/supabase';
+import { supabaseAdmin } from '../config/supabase';
 import { openai, LLAMA_MODELS, MODEL_PARAMS } from '../config/openrouter';
 import { asyncHandler } from '../middleware/errorHandler';
 import { CustomError } from '../middleware/errorHandler';
@@ -39,16 +39,16 @@ router.post('/', validateLearningResource, asyncHandler(async (req: express.Requ
     throw new CustomError('Validation failed', 400);
   }
 
-  const { 
-    title, 
-    type, 
-    url, 
-    difficulty = 'beginner', 
-    estimated_hours = 10, 
-    cost = 'free', 
-    skills = [], 
-    rating = 0.0, 
-    description 
+  const {
+    title,
+    type,
+    url,
+    difficulty = 'beginner',
+    estimated_hours = 10,
+    cost = 'free',
+    skills = [],
+    rating = 0.0,
+    description
   } = req.body;
 
   try {
@@ -59,7 +59,7 @@ router.post('/', validateLearningResource, asyncHandler(async (req: express.Requ
     }
 
     // Save learning resource to database
-    const { data: learningResource, error: dbError } = await supabase
+    const { data: learningResource, error: dbError } = await supabaseAdmin
       .from('learning_resources')
       .insert({
         title,
@@ -114,7 +114,7 @@ router.get('/', validateFilters, asyncHandler(async (req: express.Request, res: 
     search
   } = req.query;
 
-  let query = supabase
+  let query = supabaseAdmin
     .from('learning_resources')
     .select('*', { count: 'exact' });
 
@@ -125,7 +125,7 @@ router.get('/', validateFilters, asyncHandler(async (req: express.Request, res: 
   if (skill) query = query.contains('skills', [skill as string]);
   if (min_rating) query = query.gte('rating', parseFloat(min_rating as string));
   if (max_hours) query = query.lte('estimated_hours', parseInt(max_hours as string));
-  
+
   // Text search on title and description
   if (search) {
     query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`);
@@ -145,7 +145,7 @@ router.get('/', validateFilters, asyncHandler(async (req: express.Request, res: 
 
   res.json({
     success: true,
-    data: { 
+    data: {
       learningResources,
       pagination: {
         total: count || 0,
@@ -154,8 +154,8 @@ router.get('/', validateFilters, asyncHandler(async (req: express.Request, res: 
         hasMore: (count || 0) > parseInt(offset as string) + parseInt(limit as string)
       }
     },
-  } as ApiResponse<{ 
-    learningResources: LearningResource[]; 
+  } as ApiResponse<{
+    learningResources: LearningResource[];
     pagination: {
       total: number;
       limit: number;
@@ -169,7 +169,7 @@ router.get('/', validateFilters, asyncHandler(async (req: express.Request, res: 
 router.get('/:id', asyncHandler(async (req: express.Request, res: express.Response) => {
   const { id } = req.params;
 
-  const { data: learningResource, error } = await supabase
+  const { data: learningResource, error } = await supabaseAdmin
     .from('learning_resources')
     .select('*')
     .eq('id', id)
@@ -188,16 +188,16 @@ router.get('/:id', asyncHandler(async (req: express.Request, res: express.Respon
 // Update learning resource
 router.put('/:id', validateLearningResource, asyncHandler(async (req: express.Request, res: express.Response) => {
   const { id } = req.params;
-  const { 
-    title, 
-    type, 
-    url, 
-    difficulty, 
-    estimated_hours, 
-    cost, 
-    skills, 
-    rating, 
-    description 
+  const {
+    title,
+    type,
+    url,
+    difficulty,
+    estimated_hours,
+    cost,
+    skills,
+    rating,
+    description
   } = req.body;
 
   const errors = validationResult(req);
@@ -218,7 +218,7 @@ router.put('/:id', validateLearningResource, asyncHandler(async (req: express.Re
     updated_at: new Date().toISOString(),
   };
 
-  const { data: learningResource, error } = await supabase
+  const { data: learningResource, error } = await supabaseAdmin
     .from('learning_resources')
     .update(updateData)
     .eq('id', id)
@@ -241,7 +241,7 @@ router.put('/:id', validateLearningResource, asyncHandler(async (req: express.Re
 router.delete('/:id', asyncHandler(async (req: express.Request, res: express.Response) => {
   const { id } = req.params;
 
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from('learning_resources')
     .delete()
     .eq('id', id);
@@ -265,7 +265,7 @@ router.post('/by-skills', asyncHandler(async (req: express.Request, res: express
     throw new CustomError('Skills array is required', 400);
   }
 
-  let query = supabase
+  let query = supabaseAdmin
     .from('learning_resources')
     .select('*')
     .overlaps('skills', skills);
@@ -287,9 +287,9 @@ router.post('/by-skills', asyncHandler(async (req: express.Request, res: express
 
   res.json({
     success: true,
-    data: { 
+    data: {
       learningResources,
-      skillsQueried: skills 
+      skillsQueried: skills
     },
   } as ApiResponse<{ learningResources: LearningResource[]; skillsQueried: string[] }>);
 }));
@@ -303,8 +303,8 @@ router.post('/recommendations', asyncHandler(async (req: express.Request, res: e
   }
 
   // Find skills that user needs to learn
-  const skillGaps = targetSkills.filter((skill: string) => 
-    !currentSkills.some((current: string) => 
+  const skillGaps = targetSkills.filter((skill: string) =>
+    !currentSkills.some((current: string) =>
       current.toLowerCase() === skill.toLowerCase()
     )
   );
@@ -312,14 +312,14 @@ router.post('/recommendations', asyncHandler(async (req: express.Request, res: e
   if (skillGaps.length === 0) {
     return res.json({
       success: true,
-      data: { 
+      data: {
         learningResources: [],
         message: 'No skill gaps identified - you already have all target skills!'
       },
     });
   }
 
-  let query = supabase
+  let query = supabaseAdmin
     .from('learning_resources')
     .select('*')
     .overlaps('skills', skillGaps)
@@ -338,14 +338,14 @@ router.post('/recommendations', asyncHandler(async (req: express.Request, res: e
 
   res.json({
     success: true,
-    data: { 
+    data: {
       learningResources,
       skillGaps,
       currentSkills,
       targetSkills
     },
-  } as ApiResponse<{ 
-    learningResources: LearningResource[]; 
+  } as ApiResponse<{
+    learningResources: LearningResource[];
     skillGaps: string[];
     currentSkills: string[];
     targetSkills: string[];
@@ -355,7 +355,7 @@ router.post('/recommendations', asyncHandler(async (req: express.Request, res: e
 // Analyze resource content and extract skills
 router.post('/analyze', asyncHandler(async (req: express.Request, res: express.Response) => {
   const { title, description, type } = req.body;
-  
+
   if (!title || !description || !type) {
     throw new CustomError('Title, description, and type are required', 400);
   }
@@ -415,7 +415,7 @@ Only return valid JSON array, no additional text.`;
 
     // Parse JSON response
     const skills = JSON.parse(response);
-    
+
     // Validate that it's an array of strings
     if (!Array.isArray(skills) || !skills.every(skill => typeof skill === 'string')) {
       throw new Error('Invalid skills format from AI');

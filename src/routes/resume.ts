@@ -24,15 +24,20 @@ router.get(
   '/',
   asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user!.id;
+    console.log(`[Resume] Fetching resumes for user: ${userId}`);
 
-    const { data: resumes, error } = await supabase
+    const { data: resumes, error } = await supabaseAdmin
       .from('resumes')
       .select('*')
       .eq('user_id', userId)
       .order('uploaded_at', { ascending: false });
 
-    if (error) throw new CustomError('Failed to fetch resumes', 500);
+    if (error) {
+      console.error('[Resume] Database error fetching resumes:', error);
+      throw new CustomError('Failed to fetch resumes', 500);
+    }
 
+    console.log(`[Resume] Found ${resumes?.length || 0} resumes for user: ${userId}`);
     res.status(200).json({ success: true, data: resumes } as ApiResponse<any[]>);
   })
 );
@@ -44,9 +49,12 @@ router.post(
   validateUploadedFile,
   validateResumeData, // Add validation middleware
   asyncHandler(async (req: Request, res: Response) => {
+    console.log('[Resume] Upload request received');
+
     // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.warn('[Resume] Validation failed:', errors.array());
       // Clean up uploaded file if validation fails
       if (req.file && fs.existsSync(req.file.path)) {
         fs.unlinkSync(req.file.path);
@@ -56,6 +64,7 @@ router.post(
 
     const file = req.file;
     if (!file) {
+      console.warn('[Resume] No file uploaded');
       throw new CustomError('No file uploaded. Please upload a PDF/DOC/DOCX file.', 400);
     }
 
@@ -64,6 +73,8 @@ router.post(
     const sanitizedFileName = originalFileName.replace(/\s+/g, '_'); // remove spaces
     const { title, description } = req.body;
     const userId = req.user!.id;
+
+    console.log(`[Resume] Processing file: ${originalFileName} for user: ${userId}`);
 
     try {
       // Extract text
@@ -83,11 +94,16 @@ router.post(
       }
 
       if (!extractedText.trim()) {
+        console.warn('[Resume] Failed to extract text from file');
         throw new CustomError('Could not extract text from file. Please ensure the file contains readable text.', 400);
       }
 
+      console.log('[Resume] Text extracted successfully, length:', extractedText.length);
+
       // Extract skills using AI
+      console.log('[Resume] Starting AI skill extraction...');
       const skills = await extractSkillsWithAI(extractedText);
+      console.log(`[Resume] Extracted ${skills.length} skills`);
 
       // Prepare storage filename with timestamp and user ID
       const timestamp = Date.now();
@@ -95,11 +111,12 @@ router.post(
       const fileBuffer = fs.readFileSync(filePath);
 
       // Upload to Supabase Storage
+      console.log('[Resume] Uploading to Supabase Storage...');
       const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
         .from(STORAGE_BUCKETS.RESUMES)
-        .upload(storageFileName, fileBuffer, { 
+        .upload(storageFileName, fileBuffer, {
           upsert: false,
-          contentType: file.mimetype 
+          contentType: file.mimetype
         });
 
       if (uploadError) {
@@ -113,7 +130,8 @@ router.post(
         .getPublicUrl(storageFileName);
 
       // Save resume metadata to database
-      const { data: resumeData, error: dbError } = await supabase
+      console.log('[Resume] Saving metadata to database...');
+      const { data: resumeData, error: dbError } = await supabaseAdmin
         .from('resumes')
         .insert({
           user_id: userId,
@@ -135,7 +153,7 @@ router.post(
         await supabaseAdmin.storage
           .from(STORAGE_BUCKETS.RESUMES)
           .remove([storageFileName]);
-        
+
         throw new CustomError('Failed to save resume data', 500);
       }
 
@@ -144,11 +162,12 @@ router.post(
         fs.unlinkSync(filePath);
       }
 
+      console.log('[Resume] Upload process completed successfully');
       res.status(201).json({
         success: true,
         message: 'Resume uploaded and parsed successfully',
-        data: { 
-          resume: resumeData, 
+        data: {
+          resume: resumeData,
           extractedSkills: skills,
           extractedText: extractedText.substring(0, 500) + '...' // Preview of extracted text
         },

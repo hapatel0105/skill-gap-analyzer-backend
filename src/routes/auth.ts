@@ -137,10 +137,33 @@ router.post('/signout', authMiddleware, asyncHandler(async (req: Request, res: R
 }));
 
 // Get current user
-router.get('/me', asyncHandler(async (req: Request, res: Response) => {
+router.get('/me', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.user!.id;
+
+  // Get user from database
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', userId)
+    .single();
+
+  if (error || !user) {
+    throw new CustomError('User not found', 404);
+  }
+
   res.json({
     success: true,
-    data: { message: "Authentication removed" }
+    data: {
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        currentRole: user.current_role,
+        targetRole: user.target_role,
+        experience: user.experience,
+        createdAt: user.created_at,
+      },
+    },
   });
 }));
 

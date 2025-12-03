@@ -1,6 +1,6 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
-import { supabase } from '../config/supabase';
+import { supabase, supabaseAdmin } from '../config/supabase';
 import { openai, LLAMA_MODELS, PROMPT_TEMPLATES, MODEL_PARAMS } from '../config/openrouter';
 import { asyncHandler } from '../middleware/errorHandler';
 import { CustomError } from '../middleware/errorHandler';
@@ -30,7 +30,7 @@ router.post('/', validateJobDescription, asyncHandler(async (req: express.Reques
     const skills = await extractSkillsFromJobDescription(description);
 
     // Save job description to database
-    const { data: jobDescription, error: dbError } = await supabase
+    const { data: jobDescription, error: dbError } = await supabaseAdmin
       .from('job_descriptions')
       .insert({
         user_id: userId,
@@ -66,7 +66,7 @@ router.post('/', validateJobDescription, asyncHandler(async (req: express.Reques
 router.get('/', asyncHandler(async (req: express.Request, res: express.Response) => {
   const userId = req.user!.id;
 
-  const { data: jobDescriptions, error } = await supabase
+  const { data: jobDescriptions, error } = await supabaseAdmin
     .from('job_descriptions')
     .select('*')
     .eq('user_id', userId)
@@ -87,7 +87,7 @@ router.get('/:id', asyncHandler(async (req: express.Request, res: express.Respon
   const { id } = req.params;
   const userId = req.user!.id;
 
-  const { data: jobDescription, error } = await supabase
+  const { data: jobDescription, error } = await supabaseAdmin
     .from('job_descriptions')
     .select('*')
     .eq('id', id)
@@ -133,7 +133,7 @@ router.put('/:id', validateJobDescription, asyncHandler(async (req: express.Requ
     updateData.preferred_skills = skills.preferred;
   }
 
-  const { data: jobDescription, error } = await supabase
+  const { data: jobDescription, error } = await supabaseAdmin
     .from('job_descriptions')
     .update(updateData)
     .eq('id', id)
@@ -148,7 +148,7 @@ router.put('/:id', validateJobDescription, asyncHandler(async (req: express.Requ
   res.json({
     success: true,
     message: 'Job description updated successfully',
-    data: { 
+    data: {
       jobDescription,
       extractedSkills: skills,
     },
@@ -160,7 +160,7 @@ router.delete('/:id', asyncHandler(async (req: express.Request, res: express.Res
   const { id } = req.params;
   const userId = req.user!.id;
 
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from('job_descriptions')
     .delete()
     .eq('id', id)
@@ -182,7 +182,7 @@ router.post('/:id/reanalyze', asyncHandler(async (req: express.Request, res: exp
   const userId = req.user!.id;
 
   // Get job description
-  const { data: jobDescription, error: fetchError } = await supabase
+  const { data: jobDescription, error: fetchError } = await supabaseAdmin
     .from('job_descriptions')
     .select('description')
     .eq('id', id)
@@ -197,7 +197,7 @@ router.post('/:id/reanalyze', asyncHandler(async (req: express.Request, res: exp
   const skills = await extractSkillsFromJobDescription(jobDescription.description);
 
   // Update job description with new skills
-  const { data: updatedJobDescription, error: updateError } = await supabase
+  const { data: updatedJobDescription, error: updateError } = await supabaseAdmin
     .from('job_descriptions')
     .update({
       required_skills: skills.required,
@@ -229,7 +229,7 @@ router.get('/:id/compare/:resumeId', asyncHandler(async (req: express.Request, r
   const userId = req.user!.id;
 
   // Get job description
-  const { data: jobDescription, error: jobError } = await supabase
+  const { data: jobDescription, error: jobError } = await supabaseAdmin
     .from('job_descriptions')
     .select('required_skills, preferred_skills')
     .eq('id', jobId)
@@ -241,7 +241,7 @@ router.get('/:id/compare/:resumeId', asyncHandler(async (req: express.Request, r
   }
 
   // Get resume skills
-  const { data: resume, error: resumeError } = await supabase
+  const { data: resume, error: resumeError } = await supabaseAdmin
     .from('resumes')
     .select('extracted_skills')
     .eq('id', resumeId)
@@ -268,8 +268,8 @@ router.get('/:id/compare/:resumeId', asyncHandler(async (req: express.Request, r
       comparison: {
         totalRequired: allRequiredSkills.length,
         totalCurrent: currentSkills.length,
-        matchingSkills: currentSkills.filter((current: Skill) => 
-          allRequiredSkills.some((required: Skill) => 
+        matchingSkills: currentSkills.filter((current: Skill) =>
+          allRequiredSkills.some((required: Skill) =>
             required.name.toLowerCase() === current.name.toLowerCase()
           )
         ),
@@ -355,7 +355,7 @@ Only return valid JSON, no additional text.`;
 
     // Parse JSON response
     const skills = JSON.parse(response);
-    
+
     // Validate and transform skills
     if (!skills.required || !skills.preferred) {
       throw new Error('Invalid skills format');

@@ -23,6 +23,11 @@ export const authenticate = async (
   try {
     const authHeader = req.headers.authorization;
 
+    // Allow OPTIONS requests to bypass auth (handled by CORS)
+    if (req.method === 'OPTIONS') {
+      return next();
+    }
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       throw new CustomError('Access token required', 401);
     }
