@@ -17,10 +17,10 @@ const validateLearningPathRequest = [
 
 // Generate personalized learning path
 router.post('/generate', validateLearningPathRequest, asyncHandler(async (req: express.Request, res: express.Response) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    throw new CustomError('Validation failed', 400);
-  }
+  // const errors = validationResult(req);
+  // if (!errors.isEmpty()) {
+  //   throw new CustomError('Validation failed', 400);
+  // }
 
   const { skillGaps, preferences } = req.body;
   const userId = req.user!.id;
