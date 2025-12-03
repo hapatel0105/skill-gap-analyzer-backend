@@ -26,7 +26,7 @@ router.post('/analyze', validateAnalysisRequest, (0, errorHandler_1.asyncHandler
     const userId = req.user.id;
     try {
         // Get resume skills
-        const { data: resume, error: resumeError } = await supabase_1.supabase
+        const { data: resume, error: resumeError } = await supabase_1.supabaseAdmin
             .from('resumes')
             .select('extracted_skills')
             .eq('id', resumeId)
@@ -36,7 +36,7 @@ router.post('/analyze', validateAnalysisRequest, (0, errorHandler_1.asyncHandler
             throw new errorHandler_2.CustomError('Resume not found', 404);
         }
         // Get job description skills
-        const { data: jobDescription, error: jobError } = await supabase_1.supabase
+        const { data: jobDescription, error: jobError } = await supabase_1.supabaseAdmin
             .from('job_descriptions')
             .select('required_skills, preferred_skills')
             .eq('id', jobDescriptionId)
@@ -60,7 +60,7 @@ router.post('/analyze', validateAnalysisRequest, (0, errorHandler_1.asyncHandler
             estimatedTimeToClose: aiAnalysis.estimatedTimeToClose || (0, skillUtils_1.estimateTimeToClose)(manualGaps),
         };
         // Save analysis to database
-        const { data: savedAnalysis, error: saveError } = await supabase_1.supabase
+        const { data: savedAnalysis, error: saveError } = await supabase_1.supabaseAdmin
             .from('skill_gaps')
             .insert({
             user_id: userId,
@@ -101,7 +101,7 @@ router.post('/analyze', validateAnalysisRequest, (0, errorHandler_1.asyncHandler
 // Get all skill analyses for the current user
 router.get('/', (0, errorHandler_1.asyncHandler)(async (req, res) => {
     const userId = req.user.id;
-    const { data: analyses, error } = await supabase_1.supabase
+    const { data: analyses, error } = await supabase_1.supabaseAdmin
         .from('skill_gaps')
         .select('*')
         .eq('user_id', userId)
@@ -117,7 +117,7 @@ router.get('/', (0, errorHandler_1.asyncHandler)(async (req, res) => {
 // Get analysis history for user
 router.get('/history', (0, errorHandler_1.asyncHandler)(async (req, res) => {
     const userId = req.user.id;
-    const { data: analyses, error } = await supabase_1.supabase
+    const { data: analyses, error } = await supabase_1.supabaseAdmin
         .from('skill_gaps')
         .select(`
       *,
@@ -138,7 +138,7 @@ router.get('/history', (0, errorHandler_1.asyncHandler)(async (req, res) => {
 router.get('/:id', (0, errorHandler_1.asyncHandler)(async (req, res) => {
     const { id } = req.params;
     const userId = req.user.id;
-    const { data: analysis, error } = await supabase_1.supabase
+    const { data: analysis, error } = await supabase_1.supabaseAdmin
         .from('skill_gaps')
         .select(`
       *,
@@ -161,7 +161,7 @@ router.post('/:id/reanalyze', (0, errorHandler_1.asyncHandler)(async (req, res) 
     const { id } = req.params;
     const userId = req.user.id;
     // Get existing analysis
-    const { data: existingAnalysis, error: fetchError } = await supabase_1.supabase
+    const { data: existingAnalysis, error: fetchError } = await supabase_1.supabaseAdmin
         .from('skill_gaps')
         .select(`
       *,
@@ -180,7 +180,7 @@ router.post('/:id/reanalyze', (0, errorHandler_1.asyncHandler)(async (req, res) 
     // Perform new AI analysis
     const newAnalysis = await performAIGapAnalysis(currentSkills, [...requiredSkills, ...preferredSkills]);
     // Update analysis
-    const { data: updatedAnalysis, error: updateError } = await supabase_1.supabase
+    const { data: updatedAnalysis, error: updateError } = await supabase_1.supabaseAdmin
         .from('skill_gaps')
         .update({
         skill_gaps: newAnalysis.skillGaps,
@@ -208,7 +208,7 @@ router.post('/:id/reanalyze', (0, errorHandler_1.asyncHandler)(async (req, res) 
 router.get('/insights', (0, errorHandler_1.asyncHandler)(async (req, res) => {
     const userId = req.user.id;
     // Get all user's skills from resumes
-    const { data: resumes, error: resumeError } = await supabase_1.supabase
+    const { data: resumes, error: resumeError } = await supabase_1.supabaseAdmin
         .from('resumes')
         .select('extracted_skills')
         .eq('user_id', userId);

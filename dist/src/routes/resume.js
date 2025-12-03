@@ -23,20 +23,26 @@ const validateResumeData = [
 ];
 router.get('/', (0, errorHandler_1.asyncHandler)(async (req, res) => {
     const userId = req.user.id;
-    const { data: resumes, error } = await supabase_1.supabase
+    console.log(`[Resume] Fetching resumes for user: ${userId}`);
+    const { data: resumes, error } = await supabase_1.supabaseAdmin
         .from('resumes')
         .select('*')
         .eq('user_id', userId)
         .order('uploaded_at', { ascending: false });
-    if (error)
+    if (error) {
+        console.error('[Resume] Database error fetching resumes:', error);
         throw new errorHandler_2.CustomError('Failed to fetch resumes', 500);
+    }
+    console.log(`[Resume] Found ${resumes?.length || 0} resumes for user: ${userId}`);
     res.status(200).json({ success: true, data: resumes });
 }));
 router.post('/upload', upload_1.uploadResume, upload_1.handleUploadError, upload_1.validateUploadedFile, validateResumeData, // Add validation middleware
 (0, errorHandler_1.asyncHandler)(async (req, res) => {
+    console.log('[Resume] Upload request received');
     // Check for validation errors
     const errors = (0, express_validator_1.validationResult)(req);
     if (!errors.isEmpty()) {
+        console.warn('[Resume] Validation failed:', errors.array());
         // Clean up uploaded file if validation fails
         if (req.file && fs_1.default.existsSync(req.file.path)) {
             fs_1.default.unlinkSync(req.file.path);
@@ -45,6 +51,7 @@ router.post('/upload', upload_1.uploadResume, upload_1.handleUploadError, upload
     }
     const file = req.file;
     if (!file) {
+        console.warn('[Resume] No file uploaded');
         throw new errorHandler_2.CustomError('No file uploaded. Please upload a PDF/DOC/DOCX file.', 400);
     }
     const filePath = file.path;
@@ -52,6 +59,7 @@ router.post('/upload', upload_1.uploadResume, upload_1.handleUploadError, upload
     const sanitizedFileName = originalFileName.replace(/\s+/g, '_'); // remove spaces
     const { title, description } = req.body;
     const userId = req.user.id;
+    console.log(`[Resume] Processing file: ${originalFileName} for user: ${userId}`);
     try {
         // Extract text
         let extractedText = '';
@@ -70,15 +78,20 @@ router.post('/upload', upload_1.uploadResume, upload_1.handleUploadError, upload
             extractedText = fs_1.default.readFileSync(filePath, 'utf8');
         }
         if (!extractedText.trim()) {
+            console.warn('[Resume] Failed to extract text from file');
             throw new errorHandler_2.CustomError('Could not extract text from file. Please ensure the file contains readable text.', 400);
         }
+        console.log('[Resume] Text extracted successfully, length:', extractedText.length);
         // Extract skills using AI
+        console.log('[Resume] Starting AI skill extraction...');
         const skills = await extractSkillsWithAI(extractedText);
+        console.log(`[Resume] Extracted ${skills.length} skills`);
         // Prepare storage filename with timestamp and user ID
         const timestamp = Date.now();
         const storageFileName = `resumes/${userId}/${timestamp}-${sanitizedFileName}`;
         const fileBuffer = fs_1.default.readFileSync(filePath);
         // Upload to Supabase Storage
+        console.log('[Resume] Uploading to Supabase Storage...');
         const { data: uploadData, error: uploadError } = await supabase_1.supabaseAdmin.storage
             .from(supabase_1.STORAGE_BUCKETS.RESUMES)
             .upload(storageFileName, fileBuffer, {
@@ -94,7 +107,8 @@ router.post('/upload', upload_1.uploadResume, upload_1.handleUploadError, upload
             .from(supabase_1.STORAGE_BUCKETS.RESUMES)
             .getPublicUrl(storageFileName);
         // Save resume metadata to database
-        const { data: resumeData, error: dbError } = await supabase_1.supabase
+        console.log('[Resume] Saving metadata to database...');
+        const { data: resumeData, error: dbError } = await supabase_1.supabaseAdmin
             .from('resumes')
             .insert({
             user_id: userId,
@@ -121,6 +135,7 @@ router.post('/upload', upload_1.uploadResume, upload_1.handleUploadError, upload
         if (fs_1.default.existsSync(filePath)) {
             fs_1.default.unlinkSync(filePath);
         }
+        console.log('[Resume] Upload process completed successfully');
         res.status(201).json({
             success: true,
             message: 'Resume uploaded and parsed successfully',

@@ -122,10 +122,30 @@ router.post('/signout', auth_1.authMiddleware, (0, errorHandler_1.asyncHandler)(
     });
 }));
 // Get current user
-router.get('/me', (0, errorHandler_1.asyncHandler)(async (req, res) => {
+router.get('/me', auth_1.authMiddleware, (0, errorHandler_1.asyncHandler)(async (req, res) => {
+    const userId = req.user.id;
+    // Get user from database
+    const { data: user, error } = await supabase_1.supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+    if (error || !user) {
+        throw new errorHandler_2.CustomError('User not found', 404);
+    }
     res.json({
         success: true,
-        data: { message: "Authentication removed" }
+        data: {
+            user: {
+                id: user.id,
+                email: user.email,
+                name: user.name,
+                currentRole: user.current_role,
+                targetRole: user.target_role,
+                experience: user.experience,
+                createdAt: user.created_at,
+            },
+        },
     });
 }));
 // Update profile

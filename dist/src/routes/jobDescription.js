@@ -28,7 +28,7 @@ router.post('/', validateJobDescription, (0, errorHandler_1.asyncHandler)(async 
         // Use LLaMA model to extract required skills from job description
         const skills = await extractSkillsFromJobDescription(description);
         // Save job description to database
-        const { data: jobDescription, error: dbError } = await supabase_1.supabase
+        const { data: jobDescription, error: dbError } = await supabase_1.supabaseAdmin
             .from('job_descriptions')
             .insert({
             user_id: userId,
@@ -60,7 +60,7 @@ router.post('/', validateJobDescription, (0, errorHandler_1.asyncHandler)(async 
 // Get user's job descriptions
 router.get('/', (0, errorHandler_1.asyncHandler)(async (req, res) => {
     const userId = req.user.id;
-    const { data: jobDescriptions, error } = await supabase_1.supabase
+    const { data: jobDescriptions, error } = await supabase_1.supabaseAdmin
         .from('job_descriptions')
         .select('*')
         .eq('user_id', userId)
@@ -77,7 +77,7 @@ router.get('/', (0, errorHandler_1.asyncHandler)(async (req, res) => {
 router.get('/:id', (0, errorHandler_1.asyncHandler)(async (req, res) => {
     const { id } = req.params;
     const userId = req.user.id;
-    const { data: jobDescription, error } = await supabase_1.supabase
+    const { data: jobDescription, error } = await supabase_1.supabaseAdmin
         .from('job_descriptions')
         .select('*')
         .eq('id', id)
@@ -115,7 +115,7 @@ router.put('/:id', validateJobDescription, (0, errorHandler_1.asyncHandler)(asyn
         updateData.required_skills = skills.required;
         updateData.preferred_skills = skills.preferred;
     }
-    const { data: jobDescription, error } = await supabase_1.supabase
+    const { data: jobDescription, error } = await supabase_1.supabaseAdmin
         .from('job_descriptions')
         .update(updateData)
         .eq('id', id)
@@ -138,7 +138,7 @@ router.put('/:id', validateJobDescription, (0, errorHandler_1.asyncHandler)(asyn
 router.delete('/:id', (0, errorHandler_1.asyncHandler)(async (req, res) => {
     const { id } = req.params;
     const userId = req.user.id;
-    const { error } = await supabase_1.supabase
+    const { error } = await supabase_1.supabaseAdmin
         .from('job_descriptions')
         .delete()
         .eq('id', id)
@@ -156,7 +156,7 @@ router.post('/:id/reanalyze', (0, errorHandler_1.asyncHandler)(async (req, res) 
     const { id } = req.params;
     const userId = req.user.id;
     // Get job description
-    const { data: jobDescription, error: fetchError } = await supabase_1.supabase
+    const { data: jobDescription, error: fetchError } = await supabase_1.supabaseAdmin
         .from('job_descriptions')
         .select('description')
         .eq('id', id)
@@ -168,7 +168,7 @@ router.post('/:id/reanalyze', (0, errorHandler_1.asyncHandler)(async (req, res) 
     // Re-extract skills with AI
     const skills = await extractSkillsFromJobDescription(jobDescription.description);
     // Update job description with new skills
-    const { data: updatedJobDescription, error: updateError } = await supabase_1.supabase
+    const { data: updatedJobDescription, error: updateError } = await supabase_1.supabaseAdmin
         .from('job_descriptions')
         .update({
         required_skills: skills.required,
@@ -196,7 +196,7 @@ router.get('/:id/compare/:resumeId', (0, errorHandler_1.asyncHandler)(async (req
     const { id: jobId, resumeId } = req.params;
     const userId = req.user.id;
     // Get job description
-    const { data: jobDescription, error: jobError } = await supabase_1.supabase
+    const { data: jobDescription, error: jobError } = await supabase_1.supabaseAdmin
         .from('job_descriptions')
         .select('required_skills, preferred_skills')
         .eq('id', jobId)
@@ -206,7 +206,7 @@ router.get('/:id/compare/:resumeId', (0, errorHandler_1.asyncHandler)(async (req
         throw new errorHandler_2.CustomError('Job description not found', 404);
     }
     // Get resume skills
-    const { data: resume, error: resumeError } = await supabase_1.supabase
+    const { data: resume, error: resumeError } = await supabase_1.supabaseAdmin
         .from('resumes')
         .select('extracted_skills')
         .eq('id', resumeId)

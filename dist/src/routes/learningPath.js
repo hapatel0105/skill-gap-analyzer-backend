@@ -14,7 +14,7 @@ const router = express_1.default.Router();
 const validateLearningPathRequest = [
     (0, express_validator_1.body)('skillGaps').isArray().withMessage('Skill gaps array is required'),
     (0, express_validator_1.body)('skillGaps.*.skill.name').notEmpty().withMessage('Skill name is required'),
-    (0, express_validator_1.body)('skillGaps.*.gap').isIn(['small', 'medium', 'large']).withMessage('Valid gap size is required'),
+    (0, express_validator_1.body)('skillGaps.*.gap').isIn(['none', 'small', 'medium', 'large']).withMessage('Valid gap size is required'),
 ];
 // Generate personalized learning path
 router.post('/generate', validateLearningPathRequest, (0, errorHandler_1.asyncHandler)(async (req, res) => {
@@ -37,7 +37,7 @@ router.post('/generate', validateLearningPathRequest, (0, errorHandler_1.asyncHa
             createdAt: new Date(),
         };
         // Save learning path to database
-        const { data: savedPath, error: saveError } = await supabase_1.supabase
+        const { data: savedPath, error: saveError } = await supabase_1.supabaseAdmin
             .from('learning_paths')
             .insert({
             user_id: userId,
@@ -68,7 +68,7 @@ router.post('/generate', validateLearningPathRequest, (0, errorHandler_1.asyncHa
 // Get user's learning paths
 router.get('/', (0, errorHandler_1.asyncHandler)(async (req, res) => {
     const userId = req.user.id;
-    const { data: learningPaths, error } = await supabase_1.supabase
+    const { data: learningPaths, error } = await supabase_1.supabaseAdmin
         .from('learning_paths')
         .select('*')
         .eq('user_id', userId)
@@ -81,11 +81,59 @@ router.get('/', (0, errorHandler_1.asyncHandler)(async (req, res) => {
         data: { learningPaths },
     });
 }));
+// Get learning path progress
+router.get('/progress', (0, errorHandler_1.asyncHandler)(async (req, res) => {
+    const userId = req.user.id;
+    try {
+        // Get all progress records for the user with learning path details
+        const { data: progressRecords, error } = await supabase_1.supabaseAdmin
+            .from('learning_path_progress')
+            .select(`
+        *,
+        learning_paths (
+          id,
+          skill_gaps,
+          resources,
+          estimated_timeline,
+          priority_order,
+          created_at
+        )
+      `)
+            .eq('user_id', userId)
+            .order('last_activity_at', { ascending: false });
+        if (error) {
+            console.error('Failed to fetch progress:', error);
+            throw new errorHandler_2.CustomError('Failed to fetch learning path progress', 500);
+        }
+        // Calculate summary statistics
+        const summary = {
+            totalPaths: progressRecords?.length || 0,
+            activePaths: progressRecords?.filter(p => !p.completed_at && p.started_at).length || 0,
+            completedPaths: progressRecords?.filter(p => p.completed_at).length || 0,
+            totalTimeSpent: progressRecords?.reduce((sum, p) => sum + (p.time_spent_minutes || 0), 0) || 0,
+            averageProgress: progressRecords?.length > 0
+                ? progressRecords.reduce((sum, p) => sum + (p.progress_percentage || 0), 0) / progressRecords.length
+                : 0,
+        };
+        res.json({
+            success: true,
+            message: 'Learning path progress retrieved successfully',
+            data: {
+                progress: progressRecords || [],
+                summary,
+            },
+        });
+    }
+    catch (error) {
+        console.error('Progress fetch error:', error);
+        throw error;
+    }
+}));
 // Get specific learning path
 router.get('/:id', (0, errorHandler_1.asyncHandler)(async (req, res) => {
     const { id } = req.params;
     const userId = req.user.id;
-    const { data: learningPath, error } = await supabase_1.supabase
+    const { data: learningPath, error } = await supabase_1.supabaseAdmin
         .from('learning_paths')
         .select('*')
         .eq('id', id)
@@ -104,7 +152,7 @@ router.put('/:id/progress', (0, errorHandler_1.asyncHandler)(async (req, res) =>
     const { id } = req.params;
     const userId = req.user.id;
     const { completedResources, currentSkill, notes } = req.body;
-    const { data: learningPath, error } = await supabase_1.supabase
+    const { data: learningPath, error } = await supabase_1.supabaseAdmin
         .from('learning_paths')
         .update({
         completed_resources: completedResources,
@@ -131,7 +179,7 @@ router.post('/:id/regenerate', (0, errorHandler_1.asyncHandler)(async (req, res)
     const userId = req.user.id;
     const { preferences } = req.body;
     // Get existing learning path
-    const { data: existingPath, error: fetchError } = await supabase_1.supabase
+    const { data: existingPath, error: fetchError } = await supabase_1.supabaseAdmin
         .from('learning_paths')
         .select('skill_gaps')
         .eq('id', id)
@@ -143,7 +191,7 @@ router.post('/:id/regenerate', (0, errorHandler_1.asyncHandler)(async (req, res)
     // Generate new learning path with AI
     const newLearningPath = await generateAILearningPath(existingPath.skill_gaps, preferences);
     // Update learning path
-    const { data: updatedPath, error: updateError } = await supabase_1.supabase
+    const { data: updatedPath, error: updateError } = await supabase_1.supabaseAdmin
         .from('learning_paths')
         .update({
         resources: newLearningPath.resources,
@@ -180,7 +228,7 @@ router.get('/resources/:skillName', (0, errorHandler_1.asyncHandler)(async (req,
     if (cost)
         filters.cost = cost;
     // Get resources from database (you can populate this with curated resources)
-    const { data: resources, error } = await supabase_1.supabase
+    const { data: resources, error } = await supabase_1.supabaseAdmin
         .from('learning_resources')
         .select('*')
         .ilike('skills', `%${skillName}%`)
@@ -208,7 +256,7 @@ router.get('/resources/:skillName', (0, errorHandler_1.asyncHandler)(async (req,
 router.get('/recommendations', (0, errorHandler_1.asyncHandler)(async (req, res) => {
     const userId = req.user.id;
     // Get user's current skills and recent analyses
-    const { data: recentAnalyses, error: analysisError } = await supabase_1.supabase
+    const { data: recentAnalyses, error: analysisError } = await supabase_1.supabaseAdmin
         .from('skill_gaps')
         .select('skill_gaps, overall_gap')
         .eq('user_id', userId)
@@ -337,5 +385,80 @@ async function generatePersonalizedRecommendations(analyses) {
         };
     }
 }
+// Get user's learning path progress
+// Update learning path progress
+router.post('/progress/:learningPathId', (0, errorHandler_1.asyncHandler)(async (req, res) => {
+    const userId = req.user.id;
+    const { learningPathId } = req.params;
+    const { completedResources, currentResourceIndex, timeSpentMinutes, currentSkillIndex, completedSkills, notes, difficultyRating, } = req.body;
+    try {
+        // Verify learning path exists and belongs to user
+        const { data: learningPath, error: pathError } = await supabase_1.supabaseAdmin
+            .from('learning_paths')
+            .select('id, resources')
+            .eq('id', learningPathId)
+            .eq('user_id', userId)
+            .single();
+        if (pathError || !learningPath) {
+            throw new errorHandler_2.CustomError('Learning path not found', 404);
+        }
+        // Calculate progress percentage
+        const totalResources = learningPath.resources?.length || 0;
+        const completedCount = completedResources?.length || 0;
+        const progressPercentage = totalResources > 0
+            ? (completedCount / totalResources) * 100
+            : 0;
+        // Check if all resources are completed
+        const isCompleted = progressPercentage >= 100;
+        // Get existing progress to preserve started_at
+        const { data: existingProgress } = await supabase_1.supabaseAdmin
+            .from('learning_path_progress')
+            .select('started_at')
+            .eq('user_id', userId)
+            .eq('learning_path_id', learningPathId)
+            .single();
+        // Upsert progress record
+        const { data: progressData, error: progressError } = await supabase_1.supabaseAdmin
+            .from('learning_path_progress')
+            .upsert({
+            user_id: userId,
+            learning_path_id: learningPathId,
+            completed_resources: completedResources || [],
+            current_resource_index: currentResourceIndex || 0,
+            total_resources: totalResources,
+            progress_percentage: progressPercentage,
+            time_spent_minutes: timeSpentMinutes || 0,
+            current_skill_index: currentSkillIndex || 0,
+            completed_skills: completedSkills || [],
+            notes: notes || null,
+            difficulty_rating: difficultyRating || null,
+            started_at: existingProgress?.started_at || new Date().toISOString(),
+            completed_at: isCompleted ? new Date().toISOString() : null,
+            last_activity_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+        }, {
+            onConflict: 'user_id,learning_path_id'
+        })
+            .select()
+            .single();
+        if (progressError) {
+            console.error('Failed to update progress:', progressError);
+            throw new errorHandler_2.CustomError('Failed to update progress', 500);
+        }
+        res.json({
+            success: true,
+            message: 'Progress updated successfully',
+            data: {
+                progress: progressData,
+                isCompleted,
+                progressPercentage,
+            },
+        });
+    }
+    catch (error) {
+        console.error('Progress update error:', error);
+        throw error;
+    }
+}));
 exports.default = router;
 //# sourceMappingURL=learningPath.js.map

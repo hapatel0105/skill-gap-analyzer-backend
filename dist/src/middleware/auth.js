@@ -6,6 +6,10 @@ const errorHandler_1 = require("./errorHandler");
 const authenticate = async (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
+        // Allow OPTIONS requests to bypass auth (handled by CORS)
+        if (req.method === 'OPTIONS') {
+            return next();
+        }
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
             throw new errorHandler_1.CustomError('Access token required', 401);
         }

@@ -46,7 +46,7 @@ router.post('/', validateLearningResource, (0, errorHandler_1.asyncHandler)(asyn
             extractedSkills = await extractSkillsFromResource(title, description, type);
         }
         // Save learning resource to database
-        const { data: learningResource, error: dbError } = await supabase_1.supabase
+        const { data: learningResource, error: dbError } = await supabase_1.supabaseAdmin
             .from('learning_resources')
             .insert({
             title,
@@ -86,7 +86,7 @@ router.get('/', validateFilters, (0, errorHandler_1.asyncHandler)(async (req, re
         throw new errorHandler_2.CustomError('Invalid query parameters', 400);
     }
     const { type, difficulty, cost, skill, min_rating, max_hours, limit = 20, offset = 0, search } = req.query;
-    let query = supabase_1.supabase
+    let query = supabase_1.supabaseAdmin
         .from('learning_resources')
         .select('*', { count: 'exact' });
     // Apply filters
@@ -131,7 +131,7 @@ router.get('/', validateFilters, (0, errorHandler_1.asyncHandler)(async (req, re
 // Get specific learning resource
 router.get('/:id', (0, errorHandler_1.asyncHandler)(async (req, res) => {
     const { id } = req.params;
-    const { data: learningResource, error } = await supabase_1.supabase
+    const { data: learningResource, error } = await supabase_1.supabaseAdmin
         .from('learning_resources')
         .select('*')
         .eq('id', id)
@@ -164,7 +164,7 @@ router.put('/:id', validateLearningResource, (0, errorHandler_1.asyncHandler)(as
         description,
         updated_at: new Date().toISOString(),
     };
-    const { data: learningResource, error } = await supabase_1.supabase
+    const { data: learningResource, error } = await supabase_1.supabaseAdmin
         .from('learning_resources')
         .update(updateData)
         .eq('id', id)
@@ -183,7 +183,7 @@ router.put('/:id', validateLearningResource, (0, errorHandler_1.asyncHandler)(as
 // Delete learning resource
 router.delete('/:id', (0, errorHandler_1.asyncHandler)(async (req, res) => {
     const { id } = req.params;
-    const { error } = await supabase_1.supabase
+    const { error } = await supabase_1.supabaseAdmin
         .from('learning_resources')
         .delete()
         .eq('id', id);
@@ -202,7 +202,7 @@ router.post('/by-skills', (0, errorHandler_1.asyncHandler)(async (req, res) => {
     if (!skills || !Array.isArray(skills) || skills.length === 0) {
         throw new errorHandler_2.CustomError('Skills array is required', 400);
     }
-    let query = supabase_1.supabase
+    let query = supabase_1.supabaseAdmin
         .from('learning_resources')
         .select('*')
         .overlaps('skills', skills);
@@ -242,7 +242,7 @@ router.post('/recommendations', (0, errorHandler_1.asyncHandler)(async (req, res
             },
         });
     }
-    let query = supabase_1.supabase
+    let query = supabase_1.supabaseAdmin
         .from('learning_resources')
         .select('*')
         .overlaps('skills', skillGaps)
