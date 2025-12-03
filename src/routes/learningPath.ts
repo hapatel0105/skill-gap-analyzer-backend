@@ -264,7 +264,7 @@ router.get('/recommendations', asyncHandler(async (req: express.Request, res: ex
 }));
 
 // Helper function to generate AI-powered learning path
-sync function generateAILearningPath(skillGaps: SkillGap[], preferences?: any): Promise<any> {
+async function generateAILearningPath(skillGaps: SkillGap[], preferences?: any): Promise<any> {
   try {
     const prompt = PROMPT_TEMPLATES.LEARNING_PATH.replace('{skillGaps}', JSON.stringify(skillGaps));
 
