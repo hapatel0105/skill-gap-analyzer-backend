@@ -27,10 +27,33 @@ const PORT = process.env.PORT || 3001;
 app.use(helmet());
 
 // CORS configuration
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  credentials: true,
-}));
+const allowedOrigins = [
+  process.env.FRONTEND_URL, // e.g. your production frontend
+  'http://localhost:3000',
+  'https://skill-gap-analyzer-harsh-patels-projects-83ad2735.vercel.app', // Vercel URL
+].filter(Boolean); // remove undefined/null
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // allow non-browser tools like curl/postman (no origin)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      console.log('❌ CORS blocked origin:', origin);
+      return callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
+
+// (optional but nice) make sure preflight is handled explicitly
+app.options('*', cors());
 
 // Rate limiting
 const limiter = rateLimit({
